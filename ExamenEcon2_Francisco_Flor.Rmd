@@ -1,0 +1,216 @@
+---
+title: "EXAMEN"
+author: "Francisco Flor"
+date: "8/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(foreign)
+library(car)
+library(gplots)
+library(memisc)
+library(plm)
+library(openxlsx)
+library(knitr)
+library(psych)
+library(ggplot2)
+library(tidyverse)
+library(modeest)
+library(raster) 
+library(moments)
+library(dplyr)
+library(datasets)
+library(corrplot)
+library(rmarkdown)
+library(caret)
+library(MASS)
+library(tidyverse) 
+library(lmtest) 
+library(stargazer)
+library(nortest)
+library(sjPlot)
+library(ggplot2)
+
+Panel <- read.xlsx("E:\\ECONOMETRIA 2\\DATA EXAMEN.xlsx")
+
+```
+
+Como primer paso debemos sacar los estimadores/efectos para poder realizar las pruebas y determinar cual es mejor modelo para nuestra base de datos
+
+# ESTIMADORES / EFECTOS
+
+MCO/POOL
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+#MCO
+
+mco <-lm(INVERSION ~ INGRESOS + CAPITAL, data=Panel)
+
+summary(mco)
+
+#Pool
+
+pool <-plm(INVERSION ~ INGRESOS + CAPITAL,
+           data=Panel,
+           index=c("EMPRESA", "ANO"), model="pooling")
+
+summary(pool)
+
+
+```
+
+
+Fijos
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+
+fixed <-plm(INVERSION ~ INGRESOS + CAPITAL,
+            data=Panel,
+            index=c("EMPRESA", "ANO"),
+            model="within")
+
+summary(fixed)
+
+
+```
+
+
+Aleatorios
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+random <-plm(INVERSION ~ INGRESOS + CAPITAL,
+             data=Panel,
+             index=c("EMPRESA", "ANO"),
+             model="random")
+
+summary(random)
+
+```
+
+# VERSUS
+# PRUEBAS ENTRE LOS EFECTOS/ESTIMADORES
+
+PRUEBA F
+Ho: MCO es mejor que MEF
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+pFtest(fixed, mco)
+
+```
+
+Como el p valor es menor a 0.05 se rechaza la ho, y MEF es mejor que MCO
+
+
+
+
+Versus entre aleatorios y fijos
+
+Escogiendo entre MEF y MEA
+
+PPRUEBA DE HAUSMAN
+Ho: MEA
+
+H1: MEF
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+phtest(fixed, random)
+
+```
+
+Como el p valor es mayor a 0.05 no se rechaza la ho, y MEA es mejor que MEF
+
+
+VERSUS ENTRE ALEATORIA Y POOL
+
+PRUEBA BREUSCH PAGAN
+Ho: pool
+h1: aleatorio
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+plmtest(pool, type=c("bp"))
+
+```
+el p valor es menor 0,05 por lo que se rechaza la ho y se acepta la alternativa... y mejor es un modelo de efectos aleatorios
+
+
+
+# MODELO GANADOR
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+random <-plm(INVERSION ~ INGRESOS + CAPITAL,
+             data=Panel,
+             index=c("EMPRESA", "ANO"),
+             model="random")
+
+summary(random)
+
+```
+# Analisis del modelo 
+Segun el modelo ganador. Todas las variables son significativas pues son menor a 0.05
+
+si aumenta en 1 dolar la inversion, el ingresos aumenta en 0.1097781 dolares
+
+si aumenta en 1 dolar la inversion, el capital aumenta en 0.308113 dolares
+
+r-squared- como el r-squared es mayor a 0.7 tiene buen ajuste
+
+fisher- al ser menor a 0.05 las variables impactan/tienen relacion entre si
+
+Por lo que podemos concluir que el modelo es optimo para seguir... 
+
+# PRUEBAS
+
+Analizando dependencia cross seccional (se utiliza porque es un dato de panel largo - Mas tiempo (20) que individuos (10))
+
+Ho: independencia de los residuos entre los agentes
+
+Podemos usar dos test:  BP-lm y Pasaron CD
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+pcdtest(pool, test = c("lm"))
+
+
+pcdtest(pool, test = c("cd"))
+
+```
+
+En las dos pruebas sale que es menor a 0.05. Por lo tanto, se rechaza  la ho de que existe independencia de residuos entre los agentes. Se acepta la alternativa hay dependencia entre los residuos. 
+
+
+PRUEBA para determinar Heterocedasticidad
+
+Ho:Homocedasticidad
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+bptest(INVERSION ~ INGRESOS + CAPITAL + factor(EMPRESA), data = Panel, studentize=F) 
+
+```
+como el p valor es menor a 0.05 se rechaza la ho, el modelo es heterocedastico
+
+Autocorrelación
+
+Ho: no correlación serial (independencia de los residuos en el tiempo)
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+pbgtest(random)
+
+```
+
+como el p valor es menor que 0.05. se rechaza la ho, entonces no existe independencia en los residuos en el tiempo... que no hay autocorrelacion
+
+
+
+
+

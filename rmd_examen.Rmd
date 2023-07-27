@@ -1,0 +1,141 @@
+---
+title: "Francisco Flor"
+author: "Examen 2 parcial"
+date: "2022-09-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+
+library(rmarkdown)
+library(tidyverse)
+library(broom) 
+library(scales) 
+library(modelsummary)
+library(foreign)
+library(dplyr)
+
+
+data <- read.dta("D:\\ECONOMETRIA 2\\examen.dta")
+```
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+data[,6] <- data.frame(lco2=log(co2))
+
+names (data) [3] = "after" #la variable de año
+
+tratamiento <- (data[5])   
+names (tratamiento) [1] = "tratamiento"
+
+data <- data.frame(data,tratamiento)
+
+plot_data <- data %>%  
+  
+  mutate(tratamiento = factor(tratamiento, labels = c("control", "Tratado")), 
+         
+         after = factor(after, labels = c("Antes", "Despues"))) %>%  
+  
+  group_by(tratamiento, after) %>% 
+  
+  summarize(mean_lco2 = mean(lco2), 
+            
+            se_lco2 = sd(lco2) / sqrt(n()),
+            
+            upper = mean_lco2 + (1.96 * se_lco2),
+            
+            lower = mean_lco2 + (-1.96 * se_lco2))
+
+
+
+```
+
+```{r}
+
+
+ggplot(plot_data, aes(x = tratamiento, y = mean_lco2)) +
+  geom_pointrange(aes(ymin = lower, ymax = upper),
+                  color = "darkgreen", size = 1) +
+  facet_wrap(vars(after))
+  
+```
+Del grafico se puede analizar que el impuesto verde no sirvio para reducir las emisiones de co2. Y vemos que años despues nuestra variable de control incluso a aumentado. 
+
+
+
+```{r , echo=FALSE,warning=FALSE,message=FALSE}
+
+ggplot(plot_data, aes(x = after, y = mean_lco2, color = tratamiento)) +
+  geom_pointrange(aes(ymin = lower, ymax = upper), size = 1) +
+  geom_line(aes(group = tratamiento))
+
+```
+
+La grafica nos indica que no ha tenido impacto y el grupo tratado continua siendo casi igual. 
+
+
+# Diferencias en Diferencias
+
+### Impuesto verde
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+data2 <- data %>%
+  
+  mutate(
+    
+    trat_aux = case_when(
+      
+      ambiental == "1" & after == "1" ~ 1,
+      
+      ambiental == "0" & after == "1" ~ 0)) 
+
+
+data2$trat_aux[is.na(data2$trat_aux)]= 0
+
+```
+
+### AQUI ESTAMOS CREANDO UNA MEDIA PONDERADA
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+data3 <- within(data2, {trat = ave(data2$trat_aux,data2$id)})
+```
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+data4 <- data3 %>%
+  
+  mutate(
+    trat = case_when(trat == "0.5" ~ 1,
+                     
+                     trat == "0"~ 0))
+```
+
+
+
+### AQUI TRANFORMAR LOS 0.5 EN 1 Y LO QUE ES 0 SE RECODIFIQUE EN 0
+
+# Modelo Regresion
+
+## trat=0 indica grupo de control
+
+## trat=1 indica grupo de tratamiento
+
+
+
+```{r}
+
+modelo1 <- lm(lco2 ~ trat + after + trat * after,
+              data = data4)
+summary(modelo1)
+
+
+```
+
+# Analisis
+
+## Comenzamos diciendo que la variables no han sido estadisticamente significativas. 
+## trat habla acerca del nivel de de emision de co2 segun Ecuador y el resto. Donde vemos que el grupo tratado 1 mantiene un mayor nivel de emision de co2
+## after vemos que despues de la politica hay un ligero aumento en emisiones de co2. 
+## Como el trat:after vemos que la politica no ha sido efectiva. 
+

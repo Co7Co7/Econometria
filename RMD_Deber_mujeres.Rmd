@@ -1,0 +1,192 @@
+---
+title: "TALLER DIFERENCIAS EN DIFERENCIAS"
+author: "Francisco Flor"
+date: "25/8/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+
+library(rmarkdown)
+library(tidyverse)
+library(broom) 
+library(scales) 
+library(modelsummary)
+library(foreign)
+library(dplyr)
+
+
+data <- read.dta("D:\\ECONOMETRIA 2\\hh_9198.dta")
+
+```
+
+
+```{r , echo=FALSE,warning=FALSE,message=FALSE}
+attach(data)
+data[,25] <- data.frame(lexptot=log(exptot))
+
+names (data) [2] = "after"
+
+
+tratamiento <- (data[15])
+#la columna a utilizar
+
+names (tratamiento) [1] = "tratamiento"
+
+
+data <- data.frame(data,tratamiento)
+
+
+data <- data.frame(data,tratamiento)
+
+plot_data <- data %>%
+  
+  mutate(tratamiento = factor(tratamiento, labels = c("control", "Tratado")),
+         
+  after = factor(after, labels = c("Antes", "Despues"))) %>%
+  
+  group_by(tratamiento, after) %>%
+  
+  summarize(mean_lexptot = mean(lexptot),
+            
+  se_lexptot = sd(lexptot) / sqrt(n()),
+            
+  upper = mean_lexptot + (1.96 * se_lexptot),
+            
+  lower = mean_lexptot + (-1.96 * se_lexptot))
+  
+
+```
+
+```{r}
+
+ggplot(plot_data, aes(x = tratamiento, y = mean_lexptot)) +
+  
+  geom_pointrange(aes(ymin = lower, ymax = upper),
+                  
+  color = "darkgreen", size = 1) +
+  
+  facet_wrap(vars(after))
+
+
+```
+
+LA GRÁFICA NOS DICE QUE EL DE CONTROL TIENEN UN MAYOR NIVEL DE GASTOS Y LOS TRATADOS TIENEN UN MENOR NIVEL DE GASTOS ANTES
+LUEGO VEMOS QUE AMBOS AUMENTAN SU GASTOS
+
+
+```{r , echo=FALSE,warning=FALSE,message=FALSE}
+
+ggplot(plot_data, aes(x = after, y = mean_lexptot, color = tratamiento)) +
+  geom_pointrange(aes(ymin = lower, ymax = upper), size = 1) +
+  geom_line(aes(group = tratamiento))
+
+
+
+```
+
+
+EL GRUPO DE CONTROL ESTA POR ENCIMA DEL DE TRATAMIENTO
+
+
+
+#Diferencias en Diferencias
+
+
+###Hogares cuyo esposa ha recibido microcrédito en 1998
+
+
+AQUI ESTAMOS GENERANDO LA CONDICIÓN DONDE DECIMOS QUE LAS MUJERES QUE RECIBIERON EL MICROCRÉDITO DESPUÉS DEL MICROCRÉDITO VA A SER IGUAL A 1
+LAS MUJERES QUE NO RECIBIERON EL MICROCRÉDITO DESPUÉS DEL MICROCRÉDITO ES 0
+
+
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+data2 <- data %>%
+  
+  mutate(
+    
+    trat_aux = case_when(
+      
+      dfmfd == "1" & after == "1" ~ 1,
+      
+      dfmfd == "0" & after == "1" ~ 0))
+
+data2$trat_aux[is.na(data2$trat_aux)]= 0
+
+```
+
+
+#AQUI ESTAMOS CREANDO UNA MEDIA PONDERADA DONDE TENEMOS LA VARIABLE DE MAS MUJERES
+#MEDIA PONDERADA ES EL PORCENTAJE DE PARTICIPACIÓN O INCIDENCIA SEGÚN LA FAMILIA
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+data3 <- within(data2, {trat = ave(data2$trat_aux,data2$nh)})
+
+
+```
+
+
+#AQUI TRANFORMAR LOS 0.5 EN 1 Y LO QUE ES 0 SE RECODIFIQUE EN 0
+
+```{r , echo=TRUE,warning=FALSE,message=FALSE}
+
+data4 <- data3 %>%
+   mutate(
+    trat = case_when(trat == "0.5" ~ 1,
+trat == "0"~ 0))
+
+
+```
+
+##trat=0 indica grupo de control
+
+##trat=1 indica grupo de tratamiento
+
+
+```
+##Modelo de Regresión
+
+```{r}
+
+modelo1 <- lm(lexptot ~ trat + after + trat * after,
+              data = data4)
+
+summary(modelo1)
+
+```
+
+```{r}
+
+modelo1 <- lm(lexptot ~ trat + after + trat * after,
+              data = data4)
+
+
+```
+
+Las tres variables fueron estadisticamente significativas
+
+#Interpretaciones
+
+Los que tienen 0 en trat tienen un mayor nivel de gasto. QUIEN TIENE 0 EL GRUPO DE CONTROL, 1 son los de grupo de tratamiento
+
+after fue significativo. Quiere decir que despues del tratamiento se genero un nivel mayor de gasto.
+
+trar: after fue efectivo, esto significa. Que las mujeres con la mayor clasificacion tiene un mayor nivel de gasto
+
+
+```{r}
+
+modelo2 <- lm(lexptot ~ trat + after + trat * after + sexhead + agehead + educhead,
+              data = data4)
+
+summary(modelo2)
+
+```
+
+
+Adicionalmente a los analisis realizado en el modelo 1.
+Aca vemos que el sexo, la edad y el nivel de educacion son estadisticamente significativos. 
