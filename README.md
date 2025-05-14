@@ -1,1 +1,4 @@
-This repository contains the scripts made in R and their respective files, in various subjects such as Multivariate Analysis and Econometrics. Where they will be able to find the use of graphs, regressions, panel data, among others.
+Este repositorio contiene script de R y sus respectivos archivos(bd), elaborados en las materias de analisis multivariado y econometria. 
+
+
+🔗 [Ver análisis de Componentes Principales](https://co7co7.github.io/Econometrics/Componentes-principales.html)
