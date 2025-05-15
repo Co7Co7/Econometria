@@ -3,3 +3,4 @@ Este repositorio contiene script de R y sus respectivos archivos(bd), elaborados
 
 👉 [Ver análisis componentes principales](./Componentes-principales.html)
 
+👉 [Ver análisis ARIMA Bitcoin](./ARIMA-BITCOIN.html)
